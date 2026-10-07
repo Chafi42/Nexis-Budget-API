@@ -7,12 +7,13 @@ const {
   deleteTransaction,
 } = require('../controllers/transactionController')
 const { protect } = require('../middlewares/authMiddleware')
+const validate = require('../middlewares/validateMiddleware')
+const { createTransactionSchema } = require('../schemas/transactionSchema')
 
-// Application de `protect` sur toutes les routes de transactions
 router.use(protect)
 
 router.get('/', getTransactions)
-router.post('/', addTransaction)
+router.post('/', validate(createTransactionSchema), addTransaction)
 router.put('/:id', updateTransaction)
 router.delete('/:id', deleteTransaction)
 

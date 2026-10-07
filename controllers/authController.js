@@ -2,6 +2,8 @@ const User = require('../models/User')
 const AuditLog = require('../models/AuditLog')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+const Transaction = require('../models/Transaction')
+const Budget = require('../models/Budget')
 
 const generateToken = (id, email) => {
   return jwt.sign({ id, email }, process.env.JWT_SECRET, { expiresIn: '7d' })
