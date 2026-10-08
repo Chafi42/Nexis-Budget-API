@@ -29,7 +29,7 @@ L'objectif principal de cette API est de garantir la fiabilité des données fin
 
 ## 📁 Architecture du Projet
 
-Le projet suit une organisation MVC simplifiée à la racine :
+Le projet suit une organisation simplifiée à la racine :
 
 ```
 nexis-budget/
