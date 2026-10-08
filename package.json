@@ -4,10 +4,13 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "node --watch server.js",
-    "start": "node server.js",
-    "test": "jest --runInBand"
-  },
+  "dev": "node --watch server.js",
+  "start": "node server.js",
+  "test": "jest --runInBand --forceExit"
+},
+
+  "author": "",
+  "license": "ISC",
   "keywords": [],
   "type": "commonjs",
   "dependencies": {

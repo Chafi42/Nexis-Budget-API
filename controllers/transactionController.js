@@ -1,89 +1,107 @@
+const mongoose = require('mongoose')
 const Transaction = require('../models/Transaction')
+const AuditLog = require('../models/AuditLog')
 
-// GET /api/transactions - Récupérer les transactions de l'utilisateur
+const createTransaction = async (req, res) => {
+  try {
+    const transaction = await Transaction.create({ ...req.body, user: req.user._id })
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'TRANSACTION_CREATE',
+      details: `${transaction.type} : ${transaction.title} (${transaction.amount})`,
+    })
+
+    res.status(201).json(transaction)
+  } catch (error) {
+    console.error('Erreur createTransaction :', error)
+    res.status(500).json({ message: 'Erreur lors de la création de la transaction.' })
+  }
+}
+
 const getTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find({ user: req.user._id }).sort({ createdAt: -1 })
     res.status(200).json(transactions)
   } catch (error) {
+    console.error('Erreur getTransactions :', error)
     res.status(500).json({ message: 'Erreur lors de la récupération des transactions.' })
   }
 }
 
-// POST /api/transactions - Ajouter une transaction
-const addTransaction = async (req, res) => {
+const getTransactionById = async (req, res) => {
   try {
-    const { title, amount, type, category } = req.body
-
-    if (!title || !amount || !type) {
-      return res.status(400).json({ message: 'Titre, montant et type sont obligatoires.' })
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Identifiant invalide.' })
     }
-
-    const transaction = await Transaction.create({
-      user: req.user._id,
-      title,
-      amount,
-      type,
-      category: category || 'Divers',
-    })
-
-    res.status(201).json(transaction)
+    const transaction = await Transaction.findOne({ _id: req.params.id, user: req.user._id })
+    if (!transaction) {
+      return res.status(404).json({ message: 'Transaction introuvable.' })
+    }
+    res.status(200).json(transaction)
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la création de la transaction.' })
+    console.error('Erreur getTransactionById :', error)
+    res.status(500).json({ message: 'Erreur lors de la récupération de la transaction.' })
   }
 }
 
-// PUT /api/transactions/:id - Modifier une transaction
 const updateTransaction = async (req, res) => {
   try {
-    const transaction = await Transaction.findById(req.params.id)
-
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Identifiant invalide.' })
+    }
+    const transaction = await Transaction.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      req.body,
+      { returnDocument: 'after', runValidators: true }
+    )
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction introuvable.' })
     }
 
-    // Vérifier que la transaction appartient bien à l'utilisateur connecté
-    if (transaction.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Non autorisé à modifier cette transaction.' })
-    }
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'TRANSACTION_UPDATE',
+      details: `Modification de : ${transaction.title}`,
+    })
 
-    const updatedTransaction = await Transaction.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true } // Renvoie le document mis à jour
-    )
-
-    res.status(200).json(updatedTransaction)
+    res.status(200).json(transaction)
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la modification.' })
+    console.error('Erreur updateTransaction :', error)
+    res.status(500).json({ message: 'Erreur lors de la modification de la transaction.' })
   }
 }
 
-// DELETE /api/transactions/:id - Supprimer une transaction
 const deleteTransaction = async (req, res) => {
   try {
-    const transaction = await Transaction.findById(req.params.id)
-
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Identifiant invalide.' })
+    }
+    const transaction = await Transaction.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user._id,
+    })
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction introuvable.' })
     }
 
-    // Vérifier l'appartenance
-    if (transaction.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Non autorisé à supprimer cette transaction.' })
-    }
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'TRANSACTION_DELETE',
+      details: `Suppression de : ${transaction.title}`,
+    })
 
-    await transaction.deleteOne()
-
-    res.status(200).json({ message: 'Transaction supprimée avec succès.' })
+    res.status(200).json({ message: 'Transaction supprimée.' })
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la suppression.' })
+    console.error('Erreur deleteTransaction :', error)
+    res.status(500).json({ message: 'Erreur lors de la suppression de la transaction.' })
   }
 }
 
 module.exports = {
+  createTransaction,
   getTransactions,
-  addTransaction,
+  getTransactionById,
   updateTransaction,
   deleteTransaction,
 }

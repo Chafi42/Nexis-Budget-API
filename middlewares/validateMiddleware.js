@@ -1,17 +1,18 @@
 const validate = (schema) => (req, res, next) => {
-  try {
-    schema.parse({
-      body: req.body,
-      query: req.query,
-      params: req.params,
-    })
-    next()
-  } catch (error) {
+  const result = schema.safeParse(req.body ?? {})
+
+  if (!result.success) {
     return res.status(400).json({
-      message: 'Erreur de validation des données',
-      errors: error.errors || error.issues || error,
+      message: result.error.issues[0].message,
+      errors: result.error.issues.map((i) => ({
+        field: i.path.join('.'),
+        message: i.message,
+      })),
     })
   }
+
+  req.body = result.data
+  next()
 }
 
 module.exports = validate
